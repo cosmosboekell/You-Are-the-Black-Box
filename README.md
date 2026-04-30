@@ -57,7 +57,7 @@ The reveal adds a second argument: you cannot determine, from outputs alone, wha
 2. Open it in any browser
 3. No server, no dependencies, no account
 
-To deploy on GitHub Pages: push `index.html` to a repo and enable Pages from the `main` branch root. Your live URL: `https://yourusername.github.io/your-repo-name`
+To deploy on GitHub Pages: push `index.html` to a repo and enable Pages from the `main` branch root. Your live URL: https://cosmosboekell.github.io/You-Are-the-Black-Box/
 
 ---
 

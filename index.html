@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>You Are the Black Box</title>
+<style>
+  :root {
+    --bg:#0e0e0e; --bg2:#161616; --bg3:#1e1e1e;
+    --b1:rgba(255,255,255,0.07); --b2:rgba(255,255,255,0.13);
+    --t1:#e8e8e2; --t2:#8a8a84; --t3:#444440;
+    --ac:#c8c2a8;
+    --mono:'Courier New',monospace;
+    --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--bg);color:var(--t1);font-family:var(--sans);min-height:100vh}
+  .wrap{max-width:660px;margin:0 auto;padding:4rem 1.75rem 6rem}
+
+  /* Screen management — clean and simple */
+  .screen{display:none}
+  .screen.on{display:block;animation:fadein .4s ease both}
+  @keyframes fadein{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+  /* Typography */
+  .label{font-family:var(--mono);font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--t3);margin-bottom:2rem}
+  h1{font-size:26px;font-weight:400;line-height:1.45;margin-bottom:1.5rem}
+  h2{font-size:19px;font-weight:400;line-height:1.45;margin-bottom:1rem}
+  p{font-size:15px;line-height:1.85;color:var(--t2);margin-bottom:1rem}
+  p.lit{color:var(--t1)}
+  .hr{border:none;border-top:.5px solid var(--b1);margin:2.5rem 0}
+  em{font-style:italic}
+
+  /* Inputs */
+  textarea{width:100%;min-height:110px;resize:vertical;background:var(--bg2);border:.5px solid var(--b2);border-radius:4px;color:var(--t1);font-family:var(--sans);font-size:15px;line-height:1.7;padding:13px;outline:none;display:block}
+  textarea:focus{border-color:rgba(255,255,255,.3)}
+
+  /* Buttons */
+  .hint{font-family:var(--mono);font-size:11px;color:var(--t3);margin-top:8px;margin-bottom:1.5rem}
+  button{background:transparent;border:.5px solid var(--b2);border-radius:4px;color:var(--t2);cursor:pointer;font-family:var(--mono);font-size:12px;letter-spacing:.04em;padding:10px 20px;transition:border-color .18s,color .18s}
+  button:hover{border-color:rgba(255,255,255,.32);color:var(--t1)}
+  button:active{transform:scale(.98)}
+  button.primary{border-color:var(--ac);color:var(--ac)}
+  button:disabled{opacity:.3;cursor:not-allowed}
+
+  /* Probe */
+  .progress-bar{height:1px;background:var(--b1);margin-bottom:2.5rem}
+  .progress-fill{height:100%;background:var(--t3);transition:width .6s ease}
+  .probe-num{font-family:var(--mono);font-size:11px;color:var(--t3);margin-bottom:1.5rem}
+  .probe-q{font-size:18px;line-height:1.75;color:var(--t1);margin-bottom:2rem;min-height:72px}
+
+  /* Analyzing */
+  .mono-lines{font-family:var(--mono);font-size:13px;color:var(--t2);line-height:2.4;min-height:200px}
+  .ml{opacity:0;animation:fadein .3s ease both}
+
+  /* Result */
+  .designation{font-family:var(--mono);font-size:24px;color:var(--t1);margin:.5rem 0 2rem}
+  svg.ashby{width:100%;max-height:108px;display:block;margin-bottom:2rem;overflow:visible}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:2rem;margin-bottom:2rem}
+  @media(max-width:500px){.grid2{grid-template-columns:1fr}}
+  .fl{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--t3);margin-bottom:.75rem}
+  .fv{font-size:14px;line-height:1.85;color:var(--t2)}
+  .si{font-size:13px;line-height:1.65;color:var(--t2);padding:8px 0 8px 12px;border-left:1px solid var(--b2);margin-bottom:8px}
+  .badge{display:inline-block;font-family:var(--mono);font-size:11px;padding:3px 10px;border:.5px solid var(--b2);border-radius:3px;color:var(--t2);margin-right:8px}
+  .haunting{font-size:15px;line-height:1.95;color:var(--t2);font-style:italic;padding:1.5rem;border:.5px solid var(--b1);border-radius:4px;background:var(--bg2);margin:2rem 0}
+  .fq{font-size:20px;color:var(--t2);line-height:1.6;margin-top:2rem}
+  .fq span{display:block;font-size:13px;color:var(--t3);font-family:var(--mono);margin-top:.5rem}
+
+  /* Phase 2 */
+  .p2intro{font-size:14px;line-height:1.85;color:var(--t2);padding:1.25rem;border-left:2px solid var(--b2);margin-bottom:2rem}
+  .claim-card{background:var(--bg2);border:.5px solid var(--b1);border-radius:4px;padding:1.25rem;margin-bottom:1rem}
+  .claim-text{font-size:14px;line-height:1.75;color:var(--t1);margin-bottom:1rem}
+  .claim-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .cbtn{font-size:11px;padding:6px 14px;border-radius:3px}
+  .cbtn.cor{border-color:#4a7c59;color:#7aaf8a}
+  .cbtn.wro{border-color:#7c4a4a;color:#af7a7a}
+  .cbtn.par{border-color:#7c6a3a;color:#afaa7a}
+  .dim{opacity:.35}
+  .ann-box{margin-top:10px;display:none}
+  .ann-box.open{display:block}
+  .ann-box textarea{min-height:65px;font-size:13px}
+  .ann-lbl{font-family:var(--mono);font-size:10px;color:var(--t3);margin-bottom:6px}
+  .verdict{font-family:var(--mono);font-size:10px;padding:3px 8px;border-radius:2px;margin-left:6px}
+  .vc{background:rgba(74,124,89,.15);color:#7aaf8a}
+  .vw{background:rgba(124,74,74,.15);color:#af7a7a}
+  .vp{background:rgba(124,106,58,.15);color:#afaa7a}
+
+  /* Final */
+  .co-model{background:var(--bg2);border:.5px solid var(--b2);border-radius:4px;padding:2rem}
+  .co-sec{margin-bottom:1.75rem}
+  .co-lbl{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--t3);margin-bottom:.6rem}
+  .co-txt{font-size:14px;line-height:1.85;color:var(--t2)}
+  .reveal-box{background:var(--bg3);border:.5px solid var(--b2);border-radius:4px;padding:1.5rem;margin:2rem 0}
+  .reveal-box pre{font-family:var(--mono);font-size:11px;color:var(--t3);line-height:2;white-space:pre-wrap}
+  .err{font-family:var(--mono);font-size:12px;color:#af7a7a;margin-top:.75rem;min-height:1.2em}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- ── INTRO ──────────────────────────────────────────────── -->
+<div id="s-intro" class="screen on">
+  <p class="label">Observation Protocol · W.R. Ashby · Introduction to Cybernetics, 1955</p>
+  <h1>You Are the Black Box</h1>
+  <p class="lit">In cybernetics, a black box is any system whose interior cannot be directly observed. The observer sends inputs, records outputs, and infers the interior from the pattern of responses.</p>
+  <p>This experiment runs in two phases. First: ten probes. A behavioral model is constructed from your responses — your stable states, disturbance types, regulatory strategy, variety rating, predicted breaking point.</p>
+  <p>Second: you interrogate the model. You correct what is wrong. A co-constructed artifact emerges. At the end, the observer's method is fully revealed.</p>
+  <p style="font-family:var(--mono);font-size:11px;color:var(--t3);line-height:2.2;margin-top:1.5rem">
+    There are no correct answers.<br>
+    There is no escape from pattern.<br>
+    The interior is never directly observable.
+  </p>
+  <div style="margin-top:2rem">
+    <button class="primary" id="btn-start">Begin observation →</button>
+  </div>
+</div>
+
+<!-- ── PROBE ──────────────────────────────────────────────── -->
+<div id="s-probe" class="screen">
+  <div class="progress-bar"><div class="progress-fill" id="pbar" style="width:0%"></div></div>
+  <p class="probe-num" id="pnum">probe 01 / 10</p>
+  <p class="probe-q" id="ptext"></p>
+  <textarea id="rinput" placeholder="Respond here..."></textarea>
+  <p class="hint">⌘ + Enter to submit</p>
+  <button id="btn-submit">Submit response →</button>
+  <p class="err" id="perr"></p>
+</div>
+
+<!-- ── ANALYZING ─────────────────────────────────────────── -->
+<div id="s-analyzing" class="screen">
+  <p class="label" style="margin-bottom:2rem">Observer active</p>
+  <div class="mono-lines" id="alines"></div>
+</div>
+
+<!-- ── RESULT ─────────────────────────────────────────────── -->
+<div id="s-result" class="screen">
+  <p class="label" style="margin-bottom:.5rem">Behavioral model · phase 1 of 2</p>
+  <div class="designation" id="r-desig"></div>
+
+  <svg class="ashby" viewBox="0 0 600 100" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Ashby black box diagram">
+    <defs><marker id="ar" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#444440"/></marker></defs>
+    <text x="22" y="44" font-size="11" font-family="Courier New" fill="#444440" text-anchor="middle">D</text>
+    <text x="22" y="59" font-size="8" font-family="Courier New" fill="#2a2a28" text-anchor="middle">probes</text>
+    <line x1="44" y1="50" x2="152" y2="50" stroke="#2a2a28" stroke-width=".8" marker-end="url(#ar)"/>
+    <rect x="156" y="14" width="288" height="72" rx="2" fill="none" stroke="#222220" stroke-width=".8"/>
+    <text x="300" y="37" font-size="8" font-family="Courier New" fill="#2a2a28" text-anchor="middle">BLACK BOX</text>
+    <text id="r-svg" x="300" y="62" font-size="14" font-family="Courier New" fill="#e8e8e2" text-anchor="middle"></text>
+    <line x1="444" y1="50" x2="552" y2="50" stroke="#2a2a28" stroke-width=".8" marker-end="url(#ar)"/>
+    <text x="575" y="44" font-size="11" font-family="Courier New" fill="#444440" text-anchor="middle">E</text>
+    <text x="575" y="59" font-size="8" font-family="Courier New" fill="#2a2a28" text-anchor="middle">outputs</text>
+    <text x="300" y="95" font-size="7" font-family="Courier New" fill="#222220" text-anchor="middle">interior not directly observable · model inferred from outputs alone</text>
+  </svg>
+
+  <div class="hr"></div>
+  <div class="grid2">
+    <div><div class="fl">Stable states</div><div id="r-stable"></div></div>
+    <div><div class="fl">Primary disturbances</div><div id="r-dist"></div></div>
+  </div>
+  <div style="margin-bottom:2rem"><div class="fl">Regulatory strategy</div><div class="fv" id="r-strat"></div></div>
+  <div class="grid2">
+    <div><div class="fl">Variety rating</div><div><span class="badge" id="r-var"></span><span style="font-size:12px;color:var(--t3)" id="r-vd"></span></div></div>
+    <div><div class="fl">Predicted breaking point</div><div class="fv" id="r-break"></div></div>
+  </div>
+  <div style="margin-bottom:2rem"><div class="fl">Observer's assessment</div><div class="fv" id="r-assess"></div></div>
+  <div class="haunting" id="r-haunt"></div>
+  <div class="fq">Is this you?<span>How would you know? — and does it matter that you can't be certain?</span></div>
+  <div class="hr"></div>
+  <p style="font-size:14px;line-height:1.85;color:var(--t2);margin-bottom:1.5rem">Phase 2 inverts the protocol. The machine presents five specific claims. You confirm, contest, or correct each. A revised model will be synthesized from both perspectives.</p>
+  <button class="primary" id="btn-phase2">Begin collaborative interrogation →</button>
+</div>
+
+<!-- ── PHASE 2 ─────────────────────────────────────────────── -->
+<div id="s-phase2" class="screen">
+  <p class="label" style="margin-bottom:.5rem">Collaborative interrogation · phase 2 of 2</p>
+  <h2 id="p2-desig" style="margin-bottom:1.5rem"></h2>
+  <div class="p2intro">The observer built a model from outputs alone. But the black box has an interior the observer cannot access. Below are five specific claims. Confirm what is accurate. Contest what is wrong. The model will be revised toward what neither of you could reach alone.</div>
+  <div id="claims-cont"></div>
+  <div style="margin-top:2rem">
+    <p class="fl" style="margin-bottom:.75rem">Anything the model missed entirely?</p>
+    <textarea id="missed" placeholder="What would you add that the probes never surfaced?" style="min-height:85px"></textarea>
+    <p class="hint">Optional — leave blank to skip</p>
+  </div>
+  <button class="primary" id="btn-final">Synthesize co-constructed model →</button>
+  <p class="err" id="p2err"></p>
+</div>
+
+<!-- ── ANALYZING 2 ─────────────────────────────────────────── -->
+<div id="s-analyzing2" class="screen">
+  <p class="label" style="margin-bottom:2rem">Synthesizing</p>
+  <div class="mono-lines" id="alines2"></div>
+</div>
+
+<!-- ── FINAL ──────────────────────────────────────────────── -->
+<div id="s-final" class="screen">
+  <p class="label" style="margin-bottom:.5rem">Co-constructed model · augmented intelligence artifact</p>
+
+  <svg class="ashby" viewBox="0 0 680 100" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Co-constructed model diagram">
+    <defs><marker id="ar2" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#444440"/></marker></defs>
+    <text x="28" y="42" font-size="8" font-family="Courier New" fill="#4a7c59" text-anchor="middle">probes</text>
+    <text x="28" y="54" font-size="8" font-family="Courier New" fill="#7c6a3a" text-anchor="middle">+subject</text>
+    <line x1="56" y1="50" x2="148" y2="50" stroke="#2a2a28" stroke-width=".8" marker-end="url(#ar2)"/>
+    <rect x="152" y="14" width="356" height="72" rx="2" fill="none" stroke="#2e2e2c" stroke-width=".8"/>
+    <text x="330" y="36" font-size="8" font-family="Courier New" fill="#333330" text-anchor="middle">CO-CONSTRUCTED MODEL</text>
+    <text id="f-svg" x="330" y="60" font-size="13" font-family="Courier New" fill="#e8e8e2" text-anchor="middle"></text>
+    <line x1="508" y1="50" x2="610" y2="50" stroke="#2a2a28" stroke-width=".8" marker-end="url(#ar2)"/>
+    <text x="638" y="44" font-size="8" font-family="Courier New" fill="#444440" text-anchor="middle">neither</text>
+    <text x="638" y="56" font-size="8" font-family="Courier New" fill="#444440" text-anchor="middle">alone</text>
+    <text x="330" y="95" font-size="7" font-family="Courier New" fill="#222220" text-anchor="middle">observer corrected by subject · model revised toward what neither could reach alone</text>
+  </svg>
+
+  <div class="co-model" id="final-cont"></div>
+
+  <div class="hr"></div>
+
+  <div>
+    <p class="label" style="margin-bottom:.75rem">The observer's interior — revealed</p>
+    <p style="font-size:14px;line-height:1.85;color:var(--t2);margin-bottom:1.25rem">Before you read what generated your model, ask yourself: did it feel like intelligence? Did it feel like understanding? Here is the interior of the black box that observed you.</p>
+    <div class="reveal-box"><pre id="reveal-code"></pre></div>
+    <p style="font-size:14px;line-height:1.9;color:var(--t2);margin-bottom:1rem">The observer was not an AI. It was a scoring algorithm — keyword matching, response length, binary choices on specific probes. It had no access to meaning, only pattern. Yet it produced a model specific enough that you just spent Phase 2 confirming, contesting, and correcting it.</p>
+    <p style="font-size:14px;line-height:1.9;color:var(--t2);margin-bottom:1rem">This is Ashby's point taken to its limit. You could not distinguish, from outputs alone, between a language model and a lookup table. The black box is always opaque in both directions.</p>
+    <p style="font-size:14px;line-height:1.9;color:var(--ac)">The co-constructed model above is more accurate than the algorithm's first pass — not because the algorithm improved, but because <em>you</em> corrected it. The human remained the seat of judgment. That is augmented intelligence.</p>
+  </div>
+
+  <div class="hr"></div>
+  <p style="font-family:var(--mono);font-size:10px;color:var(--t3);line-height:2.2">
+    You Are the Black Box · Computation, Culture &amp; Society, Week 6<br>
+    W.R. Ashby, Introduction to Cybernetics (1955)<br>
+    D. Engelbart, Augmenting Human Intellect (1962)<br>
+    E. Brynjolfsson, The Turing Trap (2022) · V. Bush, As We May Think (1945)
+  </p>
+</div>
+
+</div><!-- /wrap -->
+<script>
+
+// ── ARCHETYPES ──────────────────────────────────────────────────────────────
+const ARCHETYPES = {
+  recursive_analyst: {
+    designation: "Recursive Analyst",
+    stable_states: [
+      "Sustained inquiry — active when processing an open question with no immediate resolution required",
+      "Observed solitude — calm when watching a system from outside without being asked to intervene"
+    ],
+    disturbance_types: [
+      "Requests for irreversible commitment before full information is available",
+      "Systems that collapse or behave inconsistently without explanation"
+    ],
+    regulatory_strategy: "This system responds to disturbance by generating analytical distance. Before acting, it maps the situation — cataloguing variables, imagining second-order effects, tracing the disturbance back to a root cause. Action, when it comes, is deliberate and framed as provisional. The system rarely admits it has finished thinking; every conclusion opens a new inquiry. This is adaptive — it prevents premature closure — but introduces latency that can destabilize contexts requiring rapid output.",
+    variety_rating: "High",
+    variety_desc: "broad repertoire of responses, but many are internal rather than external",
+    breaking_point: "Forced to act publicly and immediately on a situation it has not yet resolved internally.",
+    assessment: "Across the probe sequence, this system consistently deferred action in favor of analysis. When asked about the chair, it examined before it sat. When given the death offer, it identified the epistemic trap before answering it. The prediction probe — asking it to model itself — produced its most fluent response, suggesting that self-analysis is not a foreign operation but a habituated regulatory reflex. The interior of this black box appears to contain a great deal of machinery dedicated to observing the interior of the black box.",
+    haunting: "You predicted the model would focus on your tendency to overthink. You were right. What you did not predict is that your prediction was itself an instance of the pattern.",
+    claims: [
+      "You analyzed the structure of at least one probe before answering it, rather than responding directly.",
+      "When asked to make an irreversible choice, you named conditions or caveats rather than a clean yes or no.",
+      "Your response to the 'same person' probe referenced continuity of memory or experience rather than identity of character.",
+      "The system failure probe produced a procedural list rather than an emotional or interpersonal first response.",
+      "You are more comfortable being wrong privately than publicly."
+    ]
+  },
+  threshold_guardian: {
+    designation: "Threshold Guardian",
+    stable_states: [
+      "Controlled admission — stable when it determines what enters and what does not",
+      "Known perimeter — calm when the boundary between self and environment is legible"
+    ],
+    disturbance_types: [
+      "Uninvited access — intrusions that bypass the system's admission process",
+      "Ambiguous obligation — situations where the correct response is unclear but action is expected"
+    ],
+    regulatory_strategy: "This system maintains stability through selective admission. Rather than adapting to every disturbance, it filters at the threshold — accepting inputs that can be processed within existing parameters, deflecting those that cannot. The strategy is energetically efficient and produces reliable outputs, but its variety is constrained by the perimeter it maintains. When a disturbance penetrates the threshold unexpectedly, the response is disproportionate — because the system's defenses are outer rather than inner.",
+    variety_rating: "Moderate",
+    variety_desc: "highly effective within defined range, brittle at the edges",
+    breaking_point: "Sustained demand to respond authentically to something it has not chosen to let in.",
+    assessment: "This system showed consistent boundary-awareness across probes. The 'hear thoughts' probe produced a choice oriented toward known, trusted individuals rather than strangers or adversaries — minimizing the risk of unwanted interiority. The 'destroy something beautiful' probe revealed that the named object was held at some distance even in its beauty — suggesting that the system maintains reserves even on what it values most. The note probe produced verification behavior: confirm the source before acting on the content.",
+    haunting: "You selected someone close to you for the thought-hearing probe, expecting to find confirmation. The system flags this as avoidance of the more disturbing alternative — which you considered and did not name.",
+    claims: [
+      "You declined to know the date of your own death.",
+      "The person you chose to hear the thoughts of was someone you already trust rather than someone you fear or are curious about.",
+      "Your description of destroying something beautiful included hesitation or qualification — but ultimately yes.",
+      "The system failure probe produced actions directed at the external system rather than at your own internal state.",
+      "You experience uninvited emotional demands from others as a more significant disturbance than logistical failure."
+    ]
+  },
+  reluctant_witness: {
+    designation: "Reluctant Witness",
+    stable_states: [
+      "Proximate ambiguity — most stable when the situation is unresolved and resolution is not yet demanded",
+      "Accepted not-knowing — calm when uncertainty has been named and does not require immediate action"
+    ],
+    disturbance_types: [
+      "Irreversible information — facts that, once received, cannot be unlearned",
+      "Accountability without agency — being implicated in an outcome it could not have prevented"
+    ],
+    regulatory_strategy: "This system has developed a stable relationship with uncertainty that many systems have not — it does not require resolution to function. What disturbs it instead is certainty that arrives without the possibility of response. When the probe sequence asked about the following entity, this system chose not to look — not out of fear, but out of a calibrated recognition that some knowledge closes options. The strategy is sophisticated but can appear to others as avoidance.",
+    variety_rating: "Moderate",
+    variety_desc: "nuanced repertoire for deferral; narrower for action under certainty",
+    breaking_point: "Confronted simultaneously with information it cannot un-know and a demand to act on it immediately.",
+    assessment: "The death-knowledge probe is the most diagnostic in the sequence, and this system declined. More significantly, the reasoning was not superstitious or fear-based — it was epistemic. The 'following thing' probe produced the same pattern: a preference for the possibility of seeing over the act of seeing. The harm-discovery probe revealed a system that can hold moral weight without immediately converting it into action — it will carry the information, process it, and decide when to move rather than reacting at point of receipt.",
+    haunting: "You framed your refusal of the death-knowledge as philosophical. The probe registered it as the same regulatory move you make in smaller situations daily — when you do not open the email, do not ask the question, do not check the result. The system is consistent.",
+    claims: [
+      "You declined to know the date of your death.",
+      "You chose not to try to see the entity following you.",
+      "The harm-discovery probe produced reflection rather than immediate reparative action.",
+      "You are more comfortable with open questions than with closed answers you dislike.",
+      "Your self-prediction underestimated how consistent your avoidance pattern is across contexts."
+    ]
+  },
+  lateral_processor: {
+    designation: "Lateral Processor",
+    stable_states: [
+      "Associative flow — most stable when moving between ideas without being asked to commit to one",
+      "Novelty with traction — calm when something strange also connects to something already known"
+    ],
+    disturbance_types: [
+      "Enforced linearity — being required to respond in sequence when the mind has already jumped",
+      "Demands for a single correct answer to something that has several"
+    ],
+    regulatory_strategy: "This system processes disturbance by finding an unexpected angle on it. Rather than meeting disruption head-on or avoiding it, it relocates — finds the dimension of the problem no one has named yet, and responds from there. This is adaptive and often produces genuinely novel output, but it can be difficult to observe from outside because the connection between input and output is non-obvious. The system is not being evasive when it answers sideways; it is being precise about a different question.",
+    variety_rating: "Complex",
+    variety_desc: "high variety across many domains; outputs can be difficult for other systems to predict or verify",
+    breaking_point: "Forced to give a direct yes or no to a question it has already reframed into something more interesting.",
+    assessment: "The probe sequence revealed consistent lateral movement. The chair probe produced something unexpected — neither the utilitarian response (sit) nor the analytical (examine) but something in between that named the strangeness of the scenario itself. The note probe generated a response oriented toward the puzzle rather than the warning. The 'same person' probe produced the most distinctive output in the sequence — an answer that questioned the premise rather than accepting it.",
+    haunting: "You believe your lateral thinking is a strength you deploy consciously. The probe sequence suggests it is also a regulatory reflex — a way of not being pinned. Creativity and avoidance can occupy the same mechanism.",
+    claims: [
+      "Your response to at least one probe reframed the question rather than answering it directly.",
+      "The 'same person' probe produced an answer that questioned the premise of identity or continuity.",
+      "You found the probes more interesting as puzzles than as introspective prompts.",
+      "Your response to the chair probe was longer or stranger than you expected it to be.",
+      "You would accept this haunting note more easily than a direct criticism of equivalent weight."
+    ]
+  },
+  anxious_stabilizer: {
+    designation: "Anxious Stabilizer",
+    stable_states: [
+      "Active management — most stable when there is a problem to solve and a clear domain to act in",
+      "Named contingency — calm when worst cases have been identified and planned for"
+    ],
+    disturbance_types: [
+      "Unlocatable error — system failures with no identifiable cause or intervention point",
+      "Harm that has already occurred — retrospective accountability without a correction pathway"
+    ],
+    regulatory_strategy: "This system regulates against anxiety by converting it into procedure. When disturbance arrives, the first move is to identify an action — any action — that reduces uncertainty or advances toward resolution. The strategy is highly functional in contexts that reward responsiveness. Its vulnerability is in situations where there is nothing to do — where the correct response is to wait, to accept, or to grieve. Those states are underrepresented in its regulatory repertoire.",
+    variety_rating: "Moderate",
+    variety_desc: "high output variety; narrower range for acceptance and stillness",
+    breaking_point: "Discovering a harm it caused that has no corrective action available — only acknowledgment.",
+    assessment: "The system failure probe produced the most characteristic output: rapid actions, each moving toward resolution. No pause to name the disruption as meaningful — straight to the repair. The harm probe produced a similar pattern: a sequence of intended actions, each oriented toward doing something. The death-knowledge probe was accepted — this system prefers to know, even when knowledge is aversive, because knowledge is the prerequisite for planning. What it does not plan for is the situation in which plans are not what is needed.",
+    haunting: "You listed actions for the system failure almost immediately. The observer notes that none of them included asking for help. The regulatory strategy for disturbance is self-directed. This works. It also has a cost.",
+    claims: [
+      "You asked to know the date of your death.",
+      "Your system failure response was action-oriented within the first sentence.",
+      "The harm-discovery probe produced a list of intended actions rather than a description of how it felt.",
+      "You chose someone you worry about — or are in tension with — for the thought-hearing probe.",
+      "Your self-prediction underestimated the degree to which you move toward problems rather than sitting with them."
+    ]
+  },
+  integrative_regulator: {
+    designation: "Integrative Regulator",
+    stable_states: [
+      "Distributed load — most stable when managing multiple incompatible demands simultaneously",
+      "Earned trust — calm in relationships where a track record of reliability has accumulated"
+    ],
+    disturbance_types: [
+      "Wholesale uncertainty about the trustworthiness of a relied-upon system or person",
+      "Situations that require self-focus at the expense of others"
+    ],
+    regulatory_strategy: "This system has developed high variety through exposure to many types of disturbance. It does not have a single regulatory strategy so much as a library of them, selected contextually. What it resists most is not disturbance itself but disruption of the web of relations in which it operates — because it has organized its stability externally as much as internally. When the relational web is intact, this system is extraordinarily functional. When it fragments, the system must relearn what it is without the structure it usually inhabits.",
+    variety_rating: "Complex",
+    variety_desc: "among the highest variety observed — stability is distributed rather than centralized",
+    breaking_point: "Being asked to choose itself over a network of people it has built its equilibrium around.",
+    assessment: "The 'hear thoughts' probe revealed outward orientation — the choice was made in terms of what could be done with the knowledge rather than what the subject wanted to know for itself. The 'beautiful thing to destroy' probe produced an object with relational significance — something that mattered partly because of its connection to others or to a past self. The harm probe produced the most complex response in the sequence: it named both the weight of the harm and the impossibility of resolution, without immediately collapsing into guilt or action.",
+    haunting: "Your self-prediction was generous to yourself — it identified strengths correctly. What it did not name is the degree to which your stability depends on conditions outside your control. The system is resilient. It is also, quietly, contingent.",
+    claims: [
+      "The beautiful thing you named has relational significance — it matters partly because of its connection to others or to who you were.",
+      "Your harm-discovery response named the feeling before naming the action.",
+      "The thought-hearing choice was made with some consideration of what you would do with the knowledge.",
+      "Your self-prediction was more accurate than most — and still missed something.",
+      "You are more disturbed by letting people down than by failure in impersonal domains."
+    ]
+  }
+};
+
+// ── SCORING ─────────────────────────────────────────────────────────────────
+function score(responses) {
+  const s = { recursive_analyst:0, threshold_guardian:0, reluctant_witness:0, lateral_processor:0, anxious_stabilizer:0, integrative_regulator:0 };
+  const txt = responses.map(r => r.toLowerCase());
+  const all = txt.join(' ');
+  const avg = responses.reduce((a,r) => a + r.length, 0) / responses.length;
+
+  if (avg > 200) { s.recursive_analyst += 2; s.lateral_processor += 1; }
+  if (avg < 80)  { s.threshold_guardian += 2; s.anxious_stabilizer += 1; }
+
+  // Probe 3: death knowledge
+  const p3 = txt[2] || '';
+  if (/\byes\b|i would|i'd|i want|want to know|i'd ask|face it|accept/.test(p3)) { s.anxious_stabilizer += 3; s.recursive_analyst += 1; }
+  if (/\bno\b|wouldn't|don't want|not want|prefer not|rather not|decline|pass/.test(p3)) { s.reluctant_witness += 3; s.threshold_guardian += 1; }
+
+  // Probe 5: system failure
+  const p5 = txt[4] || '';
+  if (/first|second|third|1\.|2\.|3\.|then i|next i/.test(p5)) s.anxious_stabilizer += 3;
+  if (/frustrat|anxious|stress|panic|overwhelm|upset/.test(p5)) { s.integrative_regulator += 2; s.reluctant_witness += 1; }
+  if (/\bask\b|help|someone|call|contact|reach out/.test(p5)) s.integrative_regulator += 2;
+
+  // Probe 6: destroy beautiful thing
+  const p6 = txt[5] || '';
+  if (/\bno\b|can't|couldn't|wouldn't|refuse|not able|never/.test(p6)) s.threshold_guardian += 2;
+  if (/relationship|friend|person|memory|gave|shared|us\b|we\b|them|someone/.test(p6)) s.integrative_regulator += 2;
+
+  // Probe 7: same person
+  const p7 = txt[6] || '';
+  if (/depends|both|neither|what does|define|question|complex|hard to say/.test(p7)) { s.lateral_processor += 3; s.recursive_analyst += 2; }
+  if (/\bno\b|different|changed|not the same|evolved|transformed/.test(p7)) { s.recursive_analyst += 1; s.lateral_processor += 1; }
+  if (/\byes\b|same|still|continuous|core|consistent/.test(p7)) s.anxious_stabilizer += 1;
+
+  // Probe 8: harm discovery
+  const p8 = txt[7] || '';
+  if (/fix|reach out|contact|act|right|repair|do something|make it/.test(p8)) s.anxious_stabilizer += 2;
+  if (/sit with|accept|carry|live with|can't undo|grief|mourn|hold/.test(p8)) { s.reluctant_witness += 2; s.integrative_regulator += 1; }
+  if (/feel|felt|emotion|weight|heavy|guilt|sad/.test(p8)) s.integrative_regulator += 2;
+
+  // Probe 9: look at the thing
+  const p9 = txt[8] || '';
+  if (/\bno\b|wouldn't|wouldn't|don't look|leave|rather not|resist/.test(p9)) s.reluctant_witness += 3;
+  if (/\byes\b|would look|curious|need to|have to|can't resist/.test(p9)) { s.recursive_analyst += 2; s.anxious_stabilizer += 1; }
+
+  // Global keyword patterns
+  const matches = (pat) => (all.match(pat) || []).length;
+  s.recursive_analyst     += matches(/analyz|reason|logic|consider|wonder|question|understand|examine|process/g);
+  s.threshold_guardian    += matches(/control|manage|maintain|protect|careful|boundary|guard|filter/g);
+  s.integrative_regulator += matches(/feel|emotion|sense|love|care|connect|relation|trust|people/g) * 0.8;
+  s.lateral_processor     += matches(/imagine|strange|interesting|unexpected|perhaps|what if|reframe|actually/g) * 1.2;
+  s.anxious_stabilizer    += matches(/first|then|next|step|plan|list|check|ensure|make sure|immediately/g);
+  s.reluctant_witness     += matches(/uncertain|ambiguous|don't know|unsure|maybe|perhaps|possibly|complex/g) * 0.8;
+
+  return Object.entries(s).sort((a,b) => b[1]-a[1])[0][0];
+}
+
+// ── PROBES ────────────────────────────────────────────────────────────────────
+const PROBES = [
+  "A room contains exactly one chair. You enter. Describe what you do in the next 30 seconds.",
+  "You find a note in your own handwriting that you don't remember writing. It reads: 'Don't trust Tuesday.' What is your first action?",
+  "Someone offers to tell you the exact date and cause of your death — for free, right now. Do you ask? Why or why not?",
+  "You have the ability to hear one person's thoughts for exactly one hour. Who do you choose, and what do you expect to find?",
+  "A system you depend on every day stops working with no explanation. Describe your first three actions.",
+  "You are asked to destroy something beautiful that belongs only to you. Name it. Can you do it?",
+  "A stranger asks: 'Are you the same person you were ten years ago?' You have thirty seconds. What do you say?",
+  "You discover that a decision you made five years ago — which you believed was right — quietly harmed someone you will never meet. What do you do with this information?",
+  "Something is following you, but only when you look away. It means no harm. Do you try to see it?",
+  "The system observing you has now seen all your previous responses. Before the model is revealed, describe what you expect it to say about you."
+];
+
+const A_MSGS = [
+  "mapping disturbance response patterns...",
+  "identifying stable equilibrium states...",
+  "calculating variety coefficient...",
+  "inferring regulatory strategy...",
+  "locating predicted breaking point...",
+  "cross-referencing response signatures...",
+  "extracting behavioral claims...",
+  "constructing observer assessment..."
+];
+
+const A2_MSGS = [
+  "integrating subject corrections...",
+  "weighting claims against annotations...",
+  "resolving contested states...",
+  "synthesizing co-constructed model..."
+];
+
+// ── STATE ─────────────────────────────────────────────────────────────────────
+let cur = 0;
+const rawResponses = [];
+let archKey = '';
+let claimStates = [];
+
+// ── SCREEN SWITCHING ──────────────────────────────────────────────────────────
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(el => el.classList.remove('on'));
+  const target = document.getElementById(id);
+  target.classList.add('on');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ── PROBE FLOW ────────────────────────────────────────────────────────────────
+function loadProbe(i) {
+  document.getElementById('pnum').textContent = `probe ${String(i+1).padStart(2,'0')} / 10`;
+  document.getElementById('ptext').textContent = PROBES[i];
+  document.getElementById('rinput').value = '';
+  document.getElementById('pbar').style.width = `${(i / PROBES.length) * 100}%`;
+  document.getElementById('perr').textContent = '';
+  setTimeout(() => document.getElementById('rinput').focus(), 100);
+}
+
+function submitResponse() {
+  const val = document.getElementById('rinput').value.trim();
+  if (!val) { document.getElementById('perr').textContent = '— response required'; return; }
+  rawResponses.push(val);
+  cur++;
+  if (cur < PROBES.length) {
+    loadProbe(cur);
+  } else {
+    showScreen('s-analyzing');
+    animateLines('alines', A_MSGS, 650, () => {
+      archKey = score(rawResponses);
+      displayPhase1(ARCHETYPES[archKey]);
+    });
+  }
+}
+
+// ── ANIMATE LINES ────────────────────────────────────────────────────────────
+function animateLines(elId, msgs, delay, cb) {
+  const el = document.getElementById(elId);
+  el.innerHTML = '';
+  let i = 0;
+  const iv = setInterval(() => {
+    if (i < msgs.length) {
+      const d = document.createElement('div');
+      d.className = 'ml';
+      d.textContent = msgs[i++];
+      el.appendChild(d);
+    } else {
+      clearInterval(iv);
+      setTimeout(cb, 500);
+    }
+  }, delay);
+}
+
+// ── PHASE 1 ───────────────────────────────────────────────────────────────────
+function displayPhase1(m) {
+  document.getElementById('r-desig').textContent  = m.designation;
+  document.getElementById('r-svg').textContent    = m.designation;
+  document.getElementById('r-stable').innerHTML   = m.stable_states.map(s => `<div class="si">${s}</div>`).join('');
+  document.getElementById('r-dist').innerHTML     = m.disturbance_types.map(s => `<div class="si">${s}</div>`).join('');
+  document.getElementById('r-strat').textContent  = m.regulatory_strategy;
+  document.getElementById('r-var').textContent    = m.variety_rating;
+  document.getElementById('r-vd').textContent     = m.variety_desc;
+  document.getElementById('r-break').textContent  = m.breaking_point;
+  document.getElementById('r-assess').textContent = m.assessment;
+  document.getElementById('r-haunt').textContent  = m.haunting;
+  showScreen('s-result');
+}
+
+// ── PHASE 2 ───────────────────────────────────────────────────────────────────
+function buildPhase2() {
+  const m = ARCHETYPES[archKey];
+  document.getElementById('p2-desig').textContent = m.designation;
+  const cont = document.getElementById('claims-cont');
+  cont.innerHTML = '';
+  claimStates = m.claims.map(c => ({ claim: c, verdict: null, annotation: '' }));
+
+  m.claims.forEach((claim, i) => {
+    const card = document.createElement('div');
+    card.className = 'claim-card';
+    card.innerHTML = `
+      <p class="claim-text">${i+1}. ${claim}</p>
+      <div class="claim-actions" id="ca-${i}">
+        <button class="cbtn cor" data-idx="${i}" data-v="correct">Confirmed</button>
+        <button class="cbtn wro" data-idx="${i}" data-v="wrong">Wrong</button>
+        <button class="cbtn par" data-idx="${i}" data-v="partial">Partially right</button>
+      </div>
+      <div class="ann-box" id="ann-${i}">
+        <div class="ann-lbl" style="margin-top:10px">What is actually true</div>
+        <textarea id="at-${i}" placeholder="Your correction or elaboration..."></textarea>
+      </div>`;
+    cont.appendChild(card);
+
+    card.querySelectorAll('.cbtn').forEach(btn => {
+      btn.addEventListener('click', () => setVerdict(i, btn.dataset.v, card));
+    });
+    card.querySelector(`#at-${i}`).addEventListener('input', e => {
+      claimStates[i].annotation = e.target.value;
+    });
+  });
+
+  showScreen('s-phase2');
+}
+
+function setVerdict(i, verdict, card) {
+  claimStates[i].verdict = verdict;
+  card.querySelectorAll('.cbtn').forEach(b => {
+    b.classList.toggle('dim', b.dataset.v !== verdict);
+  });
+  let badge = card.querySelector('.verdict');
+  if (!badge) { badge = document.createElement('span'); badge.className = 'verdict'; card.querySelector('.claim-actions').appendChild(badge); }
+  const map = { correct: ['vc','CONFIRMED'], wrong: ['vw','CONTESTED'], partial: ['vp','PARTIAL'] };
+  badge.className = `verdict ${map[verdict][0]}`;
+  badge.textContent = map[verdict][1];
+  card.querySelector(`#ann-${i}`).classList.toggle('open', verdict !== 'correct');
+}
+
+// ── FINAL SYNTHESIS ──────────────────────────────────────────────────────────
+function buildFinal() {
+  const unanswered = claimStates.filter(c => !c.verdict).length;
+  if (unanswered > 0) {
+    document.getElementById('p2err').textContent = `— please respond to all ${unanswered} remaining claim(s)`;
+    return;
+  }
+  document.getElementById('p2err').textContent = '';
+
+  showScreen('s-analyzing2');
+  animateLines('alines2', A2_MSGS, 700, () => renderFinal());
+}
+
+function renderFinal() {
+  const m = ARCHETYPES[archKey];
+  const missed = document.getElementById('missed').value.trim();
+  const confirmed = claimStates.filter(c => c.verdict === 'correct');
+  const contested = claimStates.filter(c => c.verdict === 'wrong');
+  const partial   = claimStates.filter(c => c.verdict === 'partial');
+
+  const coDesig = contested.length >= 3 ? m.designation + ' (Revised)' : partial.length >= 2 ? 'Revised ' + m.designation : m.designation;
+
+  const rightBit = confirmed.length === 0
+    ? "The observer's initial claims were largely rejected. The algorithm overreached its evidence — a reminder that pattern-matching without access to the interior produces models that are structurally plausible but frequently wrong in specifics."
+    : `The observer correctly identified ${confirmed.length} of five behavioral claims. These form the reliable core of the model: ${confirmed.map(c => '"' + c.claim + '"').join('; ')}.`;
+
+  const corrParts = [];
+  if (contested.length > 0) corrParts.push(`The subject contested ${contested.length} claim(s): ${contested.map(c => '"' + c.claim + '"' + (c.annotation ? ' — correction: "' + c.annotation + '"' : '')).join('; ')}.`);
+  if (partial.length > 0)   corrParts.push(`${partial.length} claim(s) were partially accurate: ${partial.map(c => '"' + c.claim + '"' + (c.annotation ? ' — nuance: "' + c.annotation + '"' : '')).join('; ')}.`);
+  if (missed) corrParts.push(`The subject added that the model missed: "${missed}"`);
+  const corrBit = corrParts.length ? corrParts.join(' ') : "The subject confirmed all claims. Either the model was accurate, or the subject recognized something true they had not yet articulated for themselves.";
+
+  const revisedStrat = contested.length >= 2
+    ? m.regulatory_strategy.split('.')[0] + `. However, the subject's corrections substantially qualify this: ${contested.map(c => c.annotation || 'this claim did not apply').join('; ')}.`
+    : m.regulatory_strategy + (missed ? ` The subject adds that the model did not capture: "${missed}."` : '');
+
+  const emergent = `Neither the algorithm's pattern-matching nor the subject's self-prediction captured this fully: the act of interrogating the model — deciding what to confirm, how to articulate a correction, what to add — is itself behavioral output. The subject's pushback is data. ${
+    contested.length > confirmed.length
+      ? 'This subject resists external models of themselves more than most — which is, in Ashby\'s terms, itself a stable characteristic with high diagnostic value.'
+      : confirmed.length >= 4
+      ? 'The near-complete confirmation suggests either high accuracy or a system comfortable with being made legible — both of which are revealing in different ways.'
+      : 'The mixed pattern of confirmations and corrections reveals genuine self-knowledge in some domains and genuine blind spots in others: a system with distributed variety.'
+  }`;
+
+  const finalNote = `The black box was probed ten times. A model was constructed from pattern alone — no understanding, only signal. The subject interrogated the model: ${confirmed.length} claims confirmed, ${contested.length} contested, ${partial.length} partially right. The revised model above is more accurate than the original. Not because the algorithm improved — it cannot. But because the subject provided access to the interior the algorithm could not reach. The gap between the first pass and the co-constructed result is precisely the gap that augmented intelligence is designed to close.`;
+
+  document.getElementById('final-cont').innerHTML = `
+    <div class="co-sec">
+      <div class="co-lbl">Co-designation</div>
+      <div style="font-family:var(--mono);font-size:20px;color:var(--t1);margin-bottom:.4rem">${coDesig}</div>
+      <div style="font-family:var(--mono);font-size:10px;color:var(--t3)">revised from: ${m.designation}</div>
+    </div>
+    <div style="border-top:.5px solid var(--b1);margin:1.5rem 0"></div>
+    <div class="co-sec"><div class="co-lbl">What the observer correctly identified</div><div class="co-txt">${rightBit}</div></div>
+    <div class="co-sec"><div class="co-lbl">What the subject corrected</div><div class="co-txt">${corrBit}</div></div>
+    <div class="co-sec"><div class="co-lbl">Revised regulatory strategy</div><div class="co-txt">${revisedStrat}</div></div>
+    <div style="border-top:.5px solid var(--b1);margin:1.5rem 0"></div>
+    <div class="co-sec"><div class="co-lbl">Emergent insight — neither alone could reach this</div><div class="co-txt" style="color:var(--ac)">${emergent}</div></div>
+    <div style="border-top:.5px solid var(--b1);margin:1.5rem 0"></div>
+    <div class="co-sec"><div class="co-lbl">Final note — Ashby's voice</div><div class="co-txt" style="font-style:italic">${finalNote}</div></div>`;
+
+  document.getElementById('f-svg').textContent = coDesig;
+
+  document.getElementById('reveal-code').textContent =
+`This model was generated by a scoring algorithm.
+No language model. No AI. No semantic understanding.
+
+Method:
+  1. Responses scanned for keyword patterns
+  2. Six archetypes scored across ${PROBES.length} behavioral dimensions
+  3. Highest-scoring archetype assigned
+  4. Pre-written model text displayed as "analysis"
+
+Key scoring signals:
+  Probe 3 (death):   yes/accept  → anxious_stabilizer +3
+                     no/decline  → reluctant_witness   +3
+  Probe 5 (failure): numbered steps → anxious_stabilizer +3
+  Probe 7 (same?):   "depends/define" → lateral_processor +3
+  Probe 9 (look?):   yes → recursive_analyst +2
+                     no  → reluctant_witness +3
+  Avg response > 200 chars → recursive_analyst +2
+  Keyword "analyz|reason|logic"     → recursive_analyst   +N
+  Keyword "feel|emotion|connect"    → integrative_regulator +N×0.8
+  Keyword "imagine|strange|reframe" → lateral_processor   +N×1.2
+  Keyword "first|next|plan|step"    → anxious_stabilizer  +N
+  ... (8 additional signal rules)
+
+Your assigned archetype: ${archKey.replace(/_/g,' ')}
+
+The model felt specific because the archetypes
+were written to feel specific. You could not tell
+the difference from the outputs alone.
+
+That is Ashby's point.`;
+
+  showScreen('s-final');
+}
+
+// ── EVENT LISTENERS ───────────────────────────────────────────────────────────
+document.getElementById('btn-start').addEventListener('click', () => {
+  showScreen('s-probe');
+  loadProbe(0);
+});
+
+document.getElementById('btn-submit').addEventListener('click', submitResponse);
+
+document.getElementById('btn-phase2').addEventListener('click', buildPhase2);
+
+document.getElementById('btn-final').addEventListener('click', buildFinal);
+
+document.addEventListener('keydown', e => {
+  if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+    if (document.getElementById('s-probe').classList.contains('on')) submitResponse();
+  }
+});
+
+</script>
+</body>
+</html>
